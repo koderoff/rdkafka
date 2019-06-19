@@ -43,6 +43,7 @@ class RdKafkaProducer implements Producer
 
         $topic = $this->producer->newTopic($destination->getTopicName(), $destination->getConf());
         $topic->produce($partition, 0 /* must be 0 */, $payload, $key);
+        $this->producer->poll(0);
     }
 
     /**
