@@ -45,18 +45,20 @@ class RdKafkaProducerTest extends TestCase
 
     public function testShouldUseSerializerToEncodeMessageAndPutToExpectedTube()
     {
-        $message = new RdKafkaMessage('theBody', ['foo' => 'fooVal'], ['bar' => 'barVal']);
+        $messageHeaders = ['bar' => 'barVal'];
+        $message = new RdKafkaMessage('theBody', ['foo' => 'fooVal'], $messageHeaders);
         $message->setKey('key');
 
         $kafkaTopic = $this->createKafkaTopicMock();
         $kafkaTopic
             ->expects($this->once())
-            ->method('produce')
+            ->method('producev')
             ->with(
                 RD_KAFKA_PARTITION_UA,
                 0,
                 'theSerializedMessage',
-                'key'
+                'key',
+                $messageHeaders
             )
         ;
 
@@ -87,7 +89,7 @@ class RdKafkaProducerTest extends TestCase
         $kafkaTopic = $this->createKafkaTopicMock();
         $kafkaTopic
             ->expects($this->once())
-            ->method('produce')
+            ->method('producev')
         ;
 
         $kafkaProducer = $this->createKafkaProducerMock();
@@ -123,7 +125,7 @@ class RdKafkaProducerTest extends TestCase
         $kafkaTopic = $this->createKafkaTopicMock();
         $kafkaTopic
             ->expects($this->once())
-            ->method('produce')
+            ->method('producev')
         ;
 
         $kafkaProducer = $this->createKafkaProducerMock();
@@ -165,13 +167,14 @@ class RdKafkaProducerTest extends TestCase
 
     public function testShouldAllowSerializersToSerializeKeys()
     {
-        $message = new RdKafkaMessage('theBody', ['foo' => 'fooVal'], ['bar' => 'barVal']);
+        $messageHeaders = ['bar' => 'barVal'];
+        $message = new RdKafkaMessage('theBody', ['foo' => 'fooVal'], $messageHeaders);
         $message->setKey('key');
 
         $kafkaTopic = $this->createKafkaTopicMock();
         $kafkaTopic
             ->expects($this->once())
-            ->method('produce')
+            ->method('producev')
             ->with(
                 RD_KAFKA_PARTITION_UA,
                 0,
@@ -203,7 +206,7 @@ class RdKafkaProducerTest extends TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ProducerTopic
+     * @return \PHPUnit\Framework\MockObject\MockObject|ProducerTopic
      */
     private function createKafkaTopicMock()
     {
@@ -211,7 +214,7 @@ class RdKafkaProducerTest extends TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|Producer
+     * @return \PHPUnit\Framework\MockObject\MockObject|Producer
      */
     private function createKafkaProducerMock()
     {
@@ -219,7 +222,7 @@ class RdKafkaProducerTest extends TestCase
     }
 
     /**
-     * @return Serializer|\PHPUnit_Framework_MockObject_MockObject|Serializer
+     * @return Serializer|\PHPUnit\Framework\MockObject\MockObject|Serializer
      */
     private function createSerializerMock()
     {

@@ -46,12 +46,18 @@ class RdKafkaContext implements Context
     private $kafkaConsumers;
 
     /**
+     * @var RdKafkaConsumer[]
+     */
+    private $rdKafkaConsumers;
+
+    /**
      * @param array $config
      */
     public function __construct(array $config)
     {
         $this->config = $config;
         $this->kafkaConsumers = [];
+        $this->rdKafkaConsumers = [];
 
         $this->setSerializer(new JsonSerializer());
     }
@@ -102,26 +108,33 @@ class RdKafkaContext implements Context
     {
         InvalidDestinationException::assertDestinationInstanceOf($destination, RdKafkaTopic::class);
 
-        $this->kafkaConsumers[] = $kafkaConsumer = new KafkaConsumer($this->getConf());
+        $queueName = $destination->getQueueName();
 
-        $consumer = new RdKafkaConsumer(
-            $kafkaConsumer,
-            $this,
-            $destination,
-            $this->getSerializer()
-        );
+        if (!isset($this->rdKafkaConsumers[$queueName])) {
+            $this->kafkaConsumers[] = $kafkaConsumer = new KafkaConsumer($this->getConf());
 
-        if (isset($this->config['commit_async'])) {
-            $consumer->setCommitAsync($this->config['commit_async']);
+            $consumer = new RdKafkaConsumer(
+                $kafkaConsumer,
+                $this,
+                $destination,
+                $this->getSerializer()
+            );
+
+            if (isset($this->config['commit_async'])) {
+                $consumer->setCommitAsync($this->config['commit_async']);
+            }
+
+            $this->rdKafkaConsumers[$queueName] = $consumer;
         }
 
-        return $consumer;
+        return $this->rdKafkaConsumers[$queueName];
     }
 
     public function close(): void
     {
         $kafkaConsumers = $this->kafkaConsumers;
         $this->kafkaConsumers = [];
+        $this->rdKafkaConsumers = [];
 
         foreach ($kafkaConsumers as $kafkaConsumer) {
             $kafkaConsumer->unsubscribe();
@@ -136,6 +149,18 @@ class RdKafkaContext implements Context
     public function purgeQueue(Queue $queue): void
     {
         throw PurgeQueueNotSupportedException::providerDoestNotSupportIt();
+    }
+
+    public static function getLibrdKafkaVersion(): string
+    {
+        if (!defined('RD_KAFKA_VERSION')) {
+            throw new \RuntimeException('RD_KAFKA_VERSION constant is not defined. Phprdkafka is probably not installed');
+        }
+        $major = (RD_KAFKA_VERSION & 0xFF000000) >> 24;
+        $minor = (RD_KAFKA_VERSION & 0x00FF0000) >> 16;
+        $patch = (RD_KAFKA_VERSION & 0x0000FF00) >> 8;
+
+        return "$major.$minor.$patch";
     }
 
     private function getProducer(): VendorProducer
